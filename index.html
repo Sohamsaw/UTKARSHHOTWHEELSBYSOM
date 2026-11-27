@@ -3,10 +3,10 @@ import {
   ShoppingBag, Search, Shield, Package, Trash2, Plus, Minus, 
   CheckCircle2, ArrowRight, Camera, Image as ImageIcon, Lock, 
   ChevronRight, RefreshCw, Smartphone, MapPin, User, Phone, 
-  CreditCard, Sparkles, X, ChevronLeft
+  CreditCard, Sparkles, X, ChevronLeft, AlertCircle, ExternalLink
 } from 'lucide-react';
 
-// Initial Products Data
+// Sample INITIAL PRODUCTS for Hot Wheels / Diecast Store
 const INITIAL_PRODUCTS = [
   {
     id: 1,
@@ -98,16 +98,23 @@ const INITIAL_BANNERS = [
 ];
 
 export default function App() {
+  // Navigation State: 'home', 'search', 'cart', 'checkout', 'upi', 'bill', 'admin'
   const [currentPage, setCurrentPage] = useState('home');
+
+  // Products & Inventory State
   const [products, setProducts] = useState(INITIAL_PRODUCTS);
   const [banners, setBanners] = useState(INITIAL_BANNERS);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
 
+  // Search & Filters State
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
 
+  // Cart State
   const [cart, setCart] = useState([]);
+
+  // Customer Checkout Form State
   const [checkoutForm, setCheckoutForm] = useState({
     fullName: '',
     phone: '',
@@ -116,18 +123,24 @@ export default function App() {
     paymentMode: 'UPI'
   });
 
+  // Order Records State (For Admin Dashboard)
   const [orders, setOrders] = useState([]);
   const [currentOrder, setCurrentOrder] = useState(null);
+
+  // Modal & Alert States
   const [productToDelete, setProductToDelete] = useState(null);
   const [bannerSaveMsg, setBannerSaveMsg] = useState(false);
+  const [formError, setFormError] = useState('');
 
-  // Admin Access Lock
+  // Silent Hidden Admin Lock Security (Triple Click Logo to Unlock)
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
   const [logoClickCount, setLogoClickCount] = useState(0);
   const [showPinModal, setShowPinModal] = useState(false);
   const [enteredPin, setEnteredPin] = useState('');
-  const [adminTab, setAdminTab] = useState('inventory');
+  const [pinError, setPinError] = useState(false);
+  const [adminTab, setAdminTab] = useState('inventory'); // 'inventory', 'banners', 'orders'
 
+  // Admin New Product Form State
   const [newProduct, setNewProduct] = useState({
     title: '',
     subtitle: '',
@@ -136,12 +149,15 @@ export default function App() {
     image: ''
   });
 
+  // Categories list
   const categories = ['All', 'Mainline', 'Premium', 'Matchbox', 'Mini GT', 'RLC Exclusive'];
 
+  // Search Suggestions
   const searchSuggestions = products
     .filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()) || p.category.toLowerCase().includes(searchQuery.toLowerCase()))
     .slice(0, 5);
 
+  // Handle Carousel Banner Autoplay
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveBannerIndex((prev) => (prev + 1) % banners.length);
@@ -149,6 +165,7 @@ export default function App() {
     return () => clearInterval(timer);
   }, [banners.length]);
 
+  // Handle Secret Logo 3-Clicks Toggle (Silent, unlocks admin link in footer)
   const handleLogoClick = () => {
     setLogoClickCount((prev) => {
       const next = prev + 1;
@@ -164,6 +181,7 @@ export default function App() {
     }, 1500);
   };
 
+  // Add Item to Cart
   const addToCart = (product) => {
     setCart((prev) => {
       const existing = prev.find(item => item.id === product.id);
@@ -174,6 +192,7 @@ export default function App() {
     });
   };
 
+  // Cart Qty Adjustments
   const updateCartQty = (id, delta) => {
     setCart((prev) => 
       prev
@@ -182,9 +201,11 @@ export default function App() {
     );
   };
 
+  // Cart Totals
   const cartSubtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
   const totalCartCount = cart.reduce((sum, item) => sum + item.qty, 0);
 
+  // Handle Product Image Upload from Device
   const handleImageFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -196,6 +217,7 @@ export default function App() {
     }
   };
 
+  // Handle Banner Image Upload from Device
   const handleBannerFileUpload = (index, e) => {
     const file = e.target.files[0];
     if (file) {
@@ -207,6 +229,7 @@ export default function App() {
     }
   };
 
+  // Submit Admin New Product
   const handleAddProduct = (e) => {
     e.preventDefault();
     if (!newProduct.title || !newProduct.price || !newProduct.image) return;
@@ -227,24 +250,28 @@ export default function App() {
     setNewProduct({ title: '', subtitle: '', price: '', category: 'Mainline', image: '' });
   };
 
+  // Handle PIN Submit for Secret Admin Panel
   const handlePinSubmit = (e) => {
     e.preventDefault();
     if (enteredPin === '1322') {
       setShowPinModal(false);
       setEnteredPin('');
+      setPinError(false);
       setCurrentPage('admin');
     } else {
-      alert("Invalid Security PIN");
+      setPinError(true);
       setEnteredPin('');
     }
   };
 
+  // Handle Checkout Form Submission
   const handleProceedFromCheckout = (e) => {
     e.preventDefault();
     if (!checkoutForm.fullName || !checkoutForm.phone || !checkoutForm.address || !checkoutForm.pincode) {
-      alert("Please fill all mandatory shipping details!");
+      setFormError("Please fill all mandatory shipping details!");
       return;
     }
+    setFormError('');
 
     if (checkoutForm.paymentMode === 'UPI') {
       setCurrentPage('upi');
@@ -253,6 +280,7 @@ export default function App() {
     }
   };
 
+  // Complete Order & Generate Final Bill
   const completeOrder = (paymentStatus) => {
     const orderData = {
       orderId: 'DCD-' + Math.floor(100000 + Math.random() * 900000),
@@ -270,37 +298,41 @@ export default function App() {
     setCurrentPage('bill');
   };
 
+  // Filtered Products for Catalog & Search Results
   const filteredProducts = products.filter(p => {
     const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
     const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) || p.category.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
+  // Dynamic UPI URL for exact order amount
   const exactUPIUrl = `upi://pay?pa=utkarshsawant2005@oksbi&pn=Utkarsh%20Sawant&am=${cartSubtotal}&cu=INR&tn=DieCast%20Den%20Order`;
   const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(exactUPIUrl)}`;
 
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans flex flex-col antialiased selection:bg-yellow-400 selection:text-blue-900">
 
-      {/* Top Banner */}
+      {/* TOP NOTIFICATION BAR - SOLID RICH BLUE */}
       <div className="bg-blue-600 text-white text-xs py-2 px-4 text-center font-black tracking-widest uppercase flex items-center justify-center gap-2 shadow-sm">
         <Sparkles className="w-4 h-4 animate-bounce text-yellow-300" />
         <span className="drop-shadow-sm text-white">DieCast Den — Official Collector Store • Hot Wheels • Mini GT • Matchbox</span>
       </div>
 
-      {/* Header */}
+      {/* HEADER / NAVIGATION - PURE WHITE HEADER WITH TEXT LOGO */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b-4 border-yellow-400 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
 
+          {/* LOGO TEXT (BLACK UPPERCASE "DIECAST" + RED UPPERCASE "DEN") */}
           <div 
             onClick={handleLogoClick}
             className="cursor-pointer select-none flex items-center gap-1 group py-1 px-2 rounded-xl hover:bg-slate-50 transition"
+            title="DieCast Den"
           >
             <span className="text-2xl sm:text-3xl font-black tracking-tighter text-slate-950 uppercase">DIECAST</span>
             <span className="text-2xl sm:text-3xl font-black tracking-tighter text-red-600 uppercase">DEN</span>
           </div>
 
-          {/* Search Bar */}
+          {/* SEARCH BAR WITH AUTO-SUGGESTIONS */}
           <div className="flex-1 max-w-xl relative hidden md:block">
             <div className="relative">
               <input
@@ -331,7 +363,7 @@ export default function App() {
               )}
             </div>
 
-            {/* Suggestions Dropdown */}
+            {/* AUTOCOMPLETE DROPDOWN */}
             {showSuggestions && searchQuery.trim() !== '' && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border-2 border-blue-600 overflow-hidden z-50">
                 {searchSuggestions.length > 0 ? (
@@ -365,14 +397,16 @@ export default function App() {
             )}
           </div>
 
-          <div className="flex items-center gap-4">
+          {/* RIGHT ACTIONS */}
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => setCurrentPage('home')}
-              className={`text-xs font-black uppercase tracking-wider px-4 py-2 rounded-xl transition border ${currentPage === 'home' ? 'text-blue-700 border-blue-600 bg-blue-50' : 'text-slate-600 border-transparent hover:text-slate-900 hover:bg-slate-100'}`}
+              className={`text-xs font-black uppercase tracking-wider px-3 sm:px-4 py-2 rounded-xl transition border ${currentPage === 'home' ? 'text-blue-700 border-blue-600 bg-blue-50' : 'text-slate-600 border-transparent hover:text-slate-900 hover:bg-slate-100'}`}
             >
               Store
             </button>
 
+            {/* HEADER CART BUTTON */}
             <button
               onClick={() => setCurrentPage('cart')}
               className="relative p-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl transition shadow-md flex items-center gap-2 border-b-2 border-yellow-400"
@@ -389,12 +423,14 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Pages */}
+      {/* MAIN CONTENT AREA */}
       <div className="flex-1 bg-white">
 
-        {/* HOME PAGE */}
+        {/* PAGE 1: HOME CATALOG PAGE */}
         {currentPage === 'home' && (
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+
+            {/* 4-SLIDE EDITABLE HERO CAROUSEL BANNER WITH SLIDE ANIMATION */}
             <div className="relative rounded-3xl overflow-hidden shadow-2xl border-2 border-blue-600 bg-slate-950 h-64 sm:h-96">
               <div 
                 className="flex h-full transition-transform duration-700 ease-in-out"
@@ -422,6 +458,7 @@ export default function App() {
                 ))}
               </div>
 
+              {/* SLIDE INDICATORS WITH RICH ACCENTS */}
               <div className="absolute bottom-4 left-6 sm:left-12 flex gap-2.5 z-10">
                 {banners.map((_, idx) => (
                   <button
@@ -433,7 +470,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Categories Filter */}
+            {/* CATEGORY FILTER CHIPS */}
             <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
               {categories.map(cat => (
                 <button
@@ -450,7 +487,7 @@ export default function App() {
               ))}
             </div>
 
-            {/* Products Grid */}
+            {/* PRODUCTS GRID */}
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
@@ -510,10 +547,11 @@ export default function App() {
                 </div>
               )}
             </div>
+
           </main>
         )}
 
-        {/* SEARCH PAGE */}
+        {/* PAGE 2: SEARCH RESULTS PAGE */}
         {currentPage === 'search' && (
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
             <div className="flex items-center justify-between">
@@ -556,7 +594,7 @@ export default function App() {
           </main>
         )}
 
-        {/* CART PAGE */}
+        {/* PAGE 3: CART PAGE */}
         {currentPage === 'cart' && (
           <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
             <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
@@ -614,10 +652,16 @@ export default function App() {
           </main>
         )}
 
-        {/* CHECKOUT PAGE */}
+        {/* PAGE 4: CHECKOUT DETAILS PAGE */}
         {currentPage === 'checkout' && (
           <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-6">
             <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Shipping & Order Details</h1>
+
+            {formError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-xs font-bold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600" /> {formError}
+              </div>
+            )}
 
             <form onSubmit={handleProceedFromCheckout} className="bg-white rounded-2xl border-2 border-slate-200 p-6 space-y-4 shadow-md">
               <div>
@@ -713,7 +757,7 @@ export default function App() {
           </main>
         )}
 
-        {/* UPI PAGE */}
+        {/* PAGE 5: UPI PAYMENT SCREEN */}
         {currentPage === 'upi' && (
           <main className="max-w-md mx-auto px-4 py-8 space-y-6">
             <div className="bg-white rounded-3xl border-2 border-blue-600 p-6 shadow-xl text-center space-y-4">
@@ -728,6 +772,7 @@ export default function App() {
                 <p className="text-[11px] font-mono text-slate-500">UPI ID: utkarshsawant2005@oksbi</p>
               </div>
 
+              {/* DYNAMIC UPI QR CODE */}
               <div className="p-4 bg-white rounded-2xl border-2 border-blue-600 inline-block shadow-inner">
                 <img 
                   src={qrCodeImageUrl} 
@@ -740,6 +785,7 @@ export default function App() {
                 Please scan this QR code to complete your online payment.
               </p>
 
+              {/* CONFIRMATION BUTTON & WHATSAPP SHARE */}
               <div className="space-y-2 pt-2">
                 <button
                   onClick={() => completeOrder('UPI Online (Paid)')}
@@ -761,7 +807,7 @@ export default function App() {
           </main>
         )}
 
-        {/* BILL RECEIPT PAGE */}
+        {/* PAGE 6: ORDER RECEIPT / BILL */}
         {currentPage === 'bill' && currentOrder && (
           <main className="max-w-xl mx-auto px-4 py-8 space-y-6">
             <div className="bg-white rounded-3xl border-2 border-slate-200 p-8 shadow-xl space-y-6 relative overflow-hidden">
@@ -824,7 +870,7 @@ export default function App() {
           </main>
         )}
 
-        {/* ADMIN DASHBOARD */}
+        {/* PAGE 7: ADMIN / SELLER CENTRAL DASHBOARD */}
         {currentPage === 'admin' && (
           <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
             <div className="flex items-center justify-between border-b border-slate-200 pb-4">
@@ -837,6 +883,7 @@ export default function App() {
               </button>
             </div>
 
+            {/* ADMIN TABS */}
             <div className="flex gap-2">
               <button 
                 onClick={() => setAdminTab('inventory')}
@@ -858,6 +905,7 @@ export default function App() {
               </button>
             </div>
 
+            {/* TAB 1: ADD & EDIT PRODUCTS */}
             {adminTab === 'inventory' && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <form onSubmit={handleAddProduct} className="bg-white p-6 rounded-2xl border border-slate-200 space-y-4 shadow-sm h-fit">
@@ -908,6 +956,7 @@ export default function App() {
               </div>
             )}
 
+            {/* TAB 2: EDIT 4 HERO BANNERS */}
             {adminTab === 'banners' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
@@ -940,6 +989,7 @@ export default function App() {
               </div>
             )}
 
+            {/* TAB 3: CUSTOMER ORDERS LIST WITH FULL ADDRESS */}
             {adminTab === 'orders' && (
               <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-sm">
                 {orders.length > 0 ? (
@@ -963,12 +1013,13 @@ export default function App() {
                 )}
               </div>
             )}
+
           </main>
         )}
 
       </div>
 
-      {/* Floating Cart Button */}
+      {/* FLOATING CART BUTTON */}
       {totalCartCount > 0 && currentPage !== 'cart' && currentPage !== 'checkout' && currentPage !== 'upi' && (
         <button
           onClick={() => setCurrentPage('cart')}
@@ -982,7 +1033,7 @@ export default function App() {
         </button>
       )}
 
-      {/* Footer */}
+      {/* FOOTER - WHITE CLEAN FOOTER WITH BLUE & YELLOW ACCENTS */}
       <footer className="bg-slate-900 text-white border-t-4 border-yellow-400 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
@@ -1012,10 +1063,10 @@ export default function App() {
               <li>About DieCast Den</li>
               <li>Careers</li>
               <li>Press Center</li>
-              {(currentPage === 'home' || currentPage === 'search') && isAdminUnlocked && (
+              {isAdminUnlocked && (
                 <li
                   onClick={() => setShowPinModal(true)}
-                  className="cursor-pointer hover:text-slate-100 transition text-slate-400"
+                  className="cursor-pointer hover:text-slate-200 transition text-slate-400 pt-1 select-none animate-fade-in"
                 >
                   ©DieCastDen
                 </li>
@@ -1025,11 +1076,17 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Admin PIN Modal */}
+      {/* ADMIN PIN MODAL */}
       {showPinModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white border-2 border-blue-600 rounded-2xl p-6 max-w-xs w-full shadow-2xl space-y-4">
-            <h3 className="font-black text-sm uppercase text-slate-900 text-center">Enter PIN</h3>
+            <h3 className="font-black text-sm uppercase text-slate-900 text-center">Enter Admin Security PIN</h3>
+
+            {pinError && (
+              <p className="text-[11px] font-bold text-red-600 text-center bg-red-50 p-1.5 rounded-lg border border-red-200">
+                Invalid Security PIN! Try 1322
+              </p>
+            )}
 
             <form onSubmit={handlePinSubmit} className="space-y-3">
               <input
@@ -1055,7 +1112,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* CONFIRM DELETE MODAL */}
       {productToDelete && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white border-2 border-red-600 rounded-2xl p-6 max-w-xs w-full shadow-2xl space-y-4 text-center">
@@ -1085,4 +1142,3 @@ export default function App() {
     </div>
   );
 }
-```[cite: 1]
